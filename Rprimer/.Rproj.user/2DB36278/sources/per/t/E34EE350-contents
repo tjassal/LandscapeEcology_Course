@@ -1,0 +1,401 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE, cache=FALSE} 
+knitr::opts_chunk$set(echo = TRUE) 
+knitr::opts_chunk$set(error = TRUE) #this will allow it to knit with errors for demonstration purposes and cache=F
+```
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 12 px;
+}
+</style>
+
+## Week 10 Lesson: Spatial Data Basics
+#### Tim Assal
+**Some of the material for this lesson was adapted by Tim Assal from Data Carpentry Introduction to Geospatial Concepts. Thanks to Leah Wasser; Megan A. Jones; Lauren O'Brien; Joseph Stachelek; Tom Wright; Tracy Teal; Dev Paudel; Jane Wyngaard; Anne Fouilloux; Bidhyananda Yadav; Chris Prener; Tyson Swetnam; Erin Becker; Katrin Leinweber
+
+We will go through this lesson in class, but I would like each of you to type the code as we go to get used to executing code in RStudio.
+
+### This lesson will cover:
+
+1. Geospatial Data Structures: Raster and Vector
+2. Identifying Types of Data
+3. Importing Spatial Data in R
+4. Coordinate Reference Systems
+5. Projection Data
+
+
+### What is spatial data?
+
+Spatial data is information about the locations and shapes of geographic features and the relationships between them, usually stored as coordinates and topology. 
+
+### 1. Geospatial Data Structures: Raster and Vector
+
+The two primary types of geospatial data are raster and vector data. Raster data is stored as a grid of values which are rendered on a map as pixels. Each pixel value represents an area on the Earth's surface. Vector data structures represent specific features on the Earth's surface, and
+assign attributes to those features.
+
+#### Vector Data
+
+Vector data structures represent specific features on the Earth's surface along with attributes of those features.
+
+Vector objects are either points, lines, or polygons.
+
+
+![](img/pnt_line_poly.png)
+
+Image Source: National Ecological Observatory Network (NEON)  
+
+
+* **Points:** Each point is defined by a single x, y coordinate. There can be
+many points in a vector point file. Examples of point data include: sampling
+locations, the location of individual trees, or the location of survey plots.
+
+* **Lines:** Lines are composed of many (at least 2) points that are connected.
+For instance, a road or a stream may be represented by a line. This line is
+composed of a series of segments, each "bend" in the road or stream represents a
+vertex that has defined x, y location.
+
+* **Polygons:** A polygon consists of 3 or more vertices that are connected and
+closed. The outlines of survey plot boundaries, lakes, oceans, and states or
+countries are often represented by polygons.
+
+**Sometimes, boundary layers such as states and countries, are stored as lines rather than polygons. However, these boundaries, when represented as a line, will not create a closed object with a defined area that can be filled.**
+
+#### Important Attributes of Vector Data
+
+##### Extent
+
+The spatial extent is the geographic area that the vector data covers. 
+The spatial extent of an R spatial object represents the geographic edge or
+location that is the furthest north, south, east and west. In other words, extent
+represents the overall geographic coverage of the spatial object. For example:
+
+![](img/spatial-extent-vector.png)
+
+#### Raster Data
+
+Raster data is any pixelated (or gridded) data where each pixel is associated
+with a specific geographical location. The value of a pixel can be
+continuous (e.g. elevation) or categorical (e.g. land use). If this sounds
+familiar, it is because this data structure is very common: it's how
+we represent any digital image. A geospatial raster is only different
+from a digital photo in that it is accompanied by spatial information
+that connects the data to a particular location. This includes the
+raster's extent and cell size, the number of rows and columns, and
+its coordinate reference system (or CRS).
+
+![](img/raster_concept.png)
+
+Source: National Ecological Observatory Network (NEON)  
+
+
+
+Some examples of continuous rasters include:
+
+1. Precipitation maps.
+2. Maps of tree height derived from LiDAR data.
+3. Elevation values for a region.
+
+A map of elevation for Harvard Forest derived from the [NEON AOP LiDAR sensor](http://www.neonscience.org/data-collection/airborne-remote-sensing)
+is below. Elevation is represented as continuous numeric variable in this map. The legend
+shows the continuous range of values in the data from around 300 to 420 meters.
+
+![](img/rmd-01-elevation-map-1.png)
+
+Some rasters contain categorical data where each pixel represents a discrete
+class such as a landcover type (e.g., "forest" or "grassland") rather than a
+continuous value such as elevation or temperature. Some examples of classified
+maps include:
+
+1. Landcover / land-use maps.
+2. Tree height maps classified as short, medium, and tall trees.
+3. Elevation maps classified as low, medium, and high elevation.
+
+![](img/USA_landcover_classification_sm.png)
+
+
+The map above shows the contiguous United States with landcover as categorical
+data. Each color is a different landcover category. (Source: Homer, C.G., et
+al., 2015, Completion of the 2011 National Land Cover Database for the
+conterminous United States-Representing a decade of land cover change
+information. Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p.
+345-354)
+
+#### Important Attributes of Raster Data
+
+##### Extent
+
+The spatial extent is the geographic area that the raster data covers. 
+The spatial extent of an R spatial object represents the geographic edge or
+location that is the furthest north, south, east and west. In other words, extent
+represents the overall geographic coverage of the spatial object.
+
+![](img/spatial-extent-raster.png)
+**How is this possible? What is going on in the pixels that are not green?**
+
+##### Resolution
+
+A resolution of a raster represents the area on the ground that each
+pixel of the raster covers. 
+
+
+### 2. Identifying Types of Data
+
+When you work with geospatial data, it's important to be able to distinguish which type of data is being used and/or displayed. It's not always possible to tell, but it's an important component of managing workflows in R (or any geospatial software for that matter) 
+
+**See the lecture slides for this exercise.** 
+
+
+### 3. Importing spatial data in R
+
+**Option to work on this section independently**
+
+**Download the data for this portion of the lesson**
+Download the data [here](https://ndownloader.figshare.com/articles/2009586/versions/10). Once unzipped, you will need to unzip two additional files: "NEON-DS-Site-Layout-Files" and "NEON-DS-Airborne-Remote-Sensing." You can delete the other two zip files. 
+
+Place those two directories inside your working directory in a directory named "SourceData". Then you can create a new R project and load the data. This is good practice for proper file management. 
+
+#### Import Vector Data
+
+We will use the `sf` package to work with vector data in R. Notice that the
+`rgdal` package automatically loads when `sf` is loaded. Make sure you install and load the `sf` library. 
+
+```{r, message=FALSE, warning=FALSE}
+library(sf)
+```
+
+Let's load a shapefile:
+
+```{r Import-Shapefile}
+HARV_roads <- st_read ("SourceData/NEON-DS-Site-Layout-Files/HARV/HARV_roads.shp")
+```
+
+Once the shapefile is loaded as an object, we can view information about it.
+
+You can manually open up the attribute table by clicking the table icon in the global environment window or access via code. 
+
+```{r, message=FALSE, warning=FALSE}
+#What are the names of the attributes?
+names(HARV_roads)
+
+#how many rows does this dataset have?
+nrow(HARV_roads)
+
+#how many levels are present in the attribute type
+levels(HARV_roads$TYPE)
+
+#if you get the value NULL or Character, you need to convert it to a factor
+#this is a quirk with this dataset
+HARV_roads$TYPE<-as.factor(HARV_roads$TYPE)
+
+#now try again
+#how many levels are present in the attribute TYPE
+levels(HARV_roads$TYPE)
+#there are 4 types
+```
+
+We can also explore this information graphically:
+```{r, message=FALSE, warning=FALSE}
+#create a histogram of a single attribute; in this case, road type
+plot(HARV_roads$TYPE)
+```
+
+We can also explore this information spatially:
+```{r, message=FALSE, warning=FALSE}
+#plot a single attribute; in this case, road type
+plot(HARV_roads["TYPE"])
+```
+**Note: this is simply a quick plot, we'll learn how to make pretty maps in the next lesson.**
+
+#### Import Raster Data
+
+We will use the `raster` and `rgdal` packages to work with raster data in R. 
+
+```{r, message=FALSE, warning=FALSE}
+library(raster)
+library(rgdal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+DSM_HARV <- raster("SourceData/NEON-DS-Airborne-Remote-Sensing/HARV/DSM/HARV_dsmCrop.tif")
+DSM_HARV
+```
+
+The information above includes a report of min and max values, but no other data
+range statistics. Similar to other R data structures like vectors and data frame
+columns, descriptive statistics for raster data can be retrieved for a raster using the `cellStats` function: 
+
+```{r, message=FALSE, warning=FALSE}
+#get min value
+cellStats(DSM_HARV, 'min')
+
+#get max value
+cellStats(DSM_HARV, 'max')
+
+#get mean value
+cellStats(DSM_HARV, 'mean')
+
+#get standard deviation
+cellStats(DSM_HARV, 'sd')
+```
+
+### 4. Coordinate Reference Systems
+
+A data structure cannot be considered geospatial unless it is accompanied by
+coordinate reference system (CRS) information, in a format that geospatial
+applications can use to display and manipulate the data correctly. CRS
+information connects data to the Earth's surface using a mathematical model.
+
+The CRS associated with a dataset tells your mapping software (for example R)
+where the data is located in geographic space. It also tells the mapping
+software what method should be used to flatten or project the raster in
+geographic space.
+
+![Maps of the United States in different projections](img/usa_diff_projs.jpg)
+
+
+The above image shows maps of the United States in different projections. Notice
+the differences in shape associated with each projection. These differences are
+a direct result of the calculations used to flatten the data onto a
+2-dimensional map.
+
+There are lots of great resources that describe coordinate reference systems and
+projections in greater detail. **For the purposes of this lesson, what is important to understand is that data from the same location but saved indifferent projections will not line up in any GIS or other program** Thus, it's important when working with spatial data to identify the coordinate reference system applied to the data and retain it throughout data processing and analysis.
+
+#### Components of a CRS
+
+CRS information has three components:
+
+* **Datum:** A model of the shape of the earth. It has angular units (i.e.
+degrees) and defines the starting point (i.e. where is (0,0)?) so the angles
+reference a meaningful spot on the earth. Common global datums are WGS84 and
+NAD83. Datums can also be local - fit to a particular area of the globe, but
+ill-fitting outside the area of intended use. 
+
+* **Projection:** A mathematical transformation of the angular measurements on a
+round earth to a flat surface (i.e. paper or a computer screen). The units
+associated with a given projection are usually linear (feet, meters, etc.).
+
+* **Additional Parameters:** Additional parameters are often necessary to create
+the full coordinate reference system. One common additional parameter is a
+definition of the center of the map. The number of required additional
+parameters depends on what is needed by each specific projection.
+
+**There is a lot to understand about projections that we don't have time to cover here (and many of you have already learned about this in great detail in GIS classes). Please understand that in this lesson we will focus our time on learning how to deal with projections in R and less about the theory behind projections.**
+
+
+### 5. Projection Data
+
+**Download the data for this portion of the lesson**
+I've posted the data for this portion of lesson on my [course github page](https://github.com/tjassal/DataAnalysisR_Course). Click on the Ohio_Data.zip, then on the next screen, click the download button (right side of screen). Unzip the file and place all of the data inside your working directory in a directory named "SourceData". At this time also create a "DerivedData" directory. Then you can create a new R project and load the data later in the lesson as needed. *Note: take proper care in this step because we will use this same data and R project next week.* 
+
+Let's load the packages we will need for today's lesson:
+```{r, message=FALSE, warning=FALSE}
+library(raster)
+library(rgdal)
+library(sf)
+```
+
+#### Vector Projections 
+
+First we will load a shapefile of the KSU campus:
+
+```{r, message=FALSE}
+KSU_Campus <- st_read("SourceData/KSU_Boundary.shp")
+OH_Kent <- st_read("SourceData/Kent_OH_Boundary.shp")
+```
+
+Notice when we load the shapefile, R gives information about the file, including the ``bbox`` or bounding box the extent of the file and ``proj4string`` which is the projection information for this file. 
+
+We can also access the projection information more directly:
+```{r, message=FALSE}
+st_crs(KSU_Campus) 
+```
+
+Our project string for `KSU_Campus` specifies the UTM projection as follows:
+
+`+proj=utm +zone=17 +datum=WGS84 +units=m +no_defs`
+
+* **proj=utm:** the projection is UTM, UTM has numerous zones.
+* **zone=17:** the zone is 17
+* **datum=WGS84:** the datum WGS84 (the datum refers to the  0,0 reference for
+the coordinate system used in the projection)
+* **units=m:** the units for the coordinates are in METERS.
+* **no_defs:** some projections contain additional information in this area. 
+
+Note that the `zone` is unique to the UTM projection. Not all CRSs will have a zone.
+
+Now let's take a look at the projection for the Kent boundary:
+```{r, message=FALSE}
+st_crs(OH_Kent) 
+```
+
+Hmm, they are different. ``OH_Kent`` is in a mercator projection. 
+
+**In my opinion, the easiest way to deal with projections in R is to reproject one file into the projection of your preferred file.**
+
+Let's reproject ``OH_Kent`` into the same projection as ``KSU_Campus``:
+```{r, message=FALSE}
+OH_Kent.R <- st_transform(OH_Kent, crs(KSU_Campus)) #here we reproject OH_Kent into the same projection as KSU_Campus
+st_crs(OH_Kent.R) #compare with KSU_Campus
+```
+
+Above, we used the ``st_transform()`` and specified to transform ``OH_Kent`` into the ``crs`` used by ``KSU_Campus``. We could also write it a little differently by explicitly putting in the ``crs`` or writing it to it's own object:
+
+```{r, message=FALSE}
+OH_Kent.R1 <- st_transform(OH_Kent, crs("+proj=utm +zone=17 +datum=WGS84 +units=m +no_defs"))
+st_crs(OH_Kent.R1)
+#Or we can write the crs to a stand alone object, then call it
+utm.proj<-st_crs(KSU_Campus)
+OH_Kent.R2 <- st_transform(OH_Kent, utm.proj)
+st_crs(OH_Kent.R2)
+```
+
+#### Raster Projections 
+
+Next, let's load a raster of the elevation of the Kent vicinity and have a look at the projection info:
+```{r, message=FALSE}
+Kent.Elev <- raster ("SourceData/kent_elev.tif")
+st_crs(Kent.Elev)
+#note, this data set is in meters!
+```
+
+It looks like the data is in a latlong projection.
+
+We can use the `projectRaster()` function to reproject a raster into a new CRS.
+Keep in mind that reprojection only works when you first have a defined CRS
+for the raster object that you want to reproject. It cannot be used if no
+CRS is defined. Lucky for us, the `KSU_campus` has a defined CRS.
+
+To use the `projectRaster()` function, we need to define two things:
+
+1. the object we want to reproject and
+2. the CRS that we want to reproject it to.
+
+The syntax is `projectRaster(RasterObject, crs = CRSToReprojectTo)`
+
+Suppose we wanted to do some analysis with this dataset. Let's reproject it into the same projection as the KSU_Campus:
+
+```{r, message=FALSE}
+Kent.Elev.R<- projectRaster(Kent.Elev, crs = crs(KSU_Campus))
+st_crs(Kent.Elev.R)
+```
+
+#another way to determine the projection is to plot both and note the coordinates:
+```{r, message=FALSE}
+plot(Kent.Elev, main = "Note: Decimal Degrees (Lat Long Projection)") #Decimal degrees - latlong
+```
+```{r, message=FALSE}
+plot(Kent.Elev.R, main = "Note: Meters (UTM Projection") #UTM - meters
+```
+
+**Excellent, now all of our data is in the same projection! We will pick up with this same data set next week.** 
+
+

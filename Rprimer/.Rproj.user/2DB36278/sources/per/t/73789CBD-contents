@@ -1,0 +1,583 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R Primer for Landscape Ecology
+
+## Instructor:
+#### Dr. Tim Assal | Assistant Professor | KSU Dept. of Geography
+##### Contact: tassal@kent.edu | [AssalLab.org](http://www.AssalLab.org/) 
+
+## Goals of this exercise
+* Gain exposure with R & RStudio
+* Learn how to import data, do something with it, then export it
+* Create a basic blueprint for analysis of your own data
+* Introduce spatial data basics 
+* Create a basic map with vector data
+* Load and analyze raster data
+
+**I want this to serve as a basic resource for this course.**
+
+## Part A: An introduction to R
+
+## Section Outline
+1. Overview of R & RStudio (20 mins)
+2. Packages in R (10 mins)
+3. Import Data (15 mins)
+4. Visualize Data (15 mins)
+5. Moving Beyond Today (10 mins)
+
+
+**The materials for this workshop can be accessed on [github](https://github.com/tjassal/LandscapeEcology_Course).** 
+
+*Some of these materials were adapted from Data Carpentry, Ethan White, Simon Peng, Hadley Wickham and Ethan White (and probably many others that I forgot).*
+
+## 1. Overview of R & RStudio
+
+#### What is R? What is RStudio? 
+
+The term “R” is used to refer to both the programming language and the software that interprets the scripts written using it.
+
+RStudio is currently a very popular way to not only write your R scripts but also to interact with the R software. To function correctly, RStudio needs R and therefore both need to be installed on your computer.
+
+#### Why learn R?
+
+R does not involve lots of pointing and clicking, and that’s a good thing
+The learning curve might be steeper than with other software, but with R, the results of your analysis do not rely on remembering a succession of pointing and clicking, but instead on a series of written commands, and that’s a good thing! So, if you want to redo your analysis because you collected more data, you don’t have to remember which button you clicked in which order to obtain your results; you just have to run your script again.
+Working with scripts makes the steps you used in your analysis clear, and the code you write can be inspected by someone else who can give you feedback and spot mistakes.
+Working with scripts forces you to have a deeper understanding of what you are doing, and facilitates your learning and comprehension of the methods you use.
+
+#### R code is great for reproducibility
+Reproducibility is when someone else (including your future self) can obtain the same results from the same dataset when using the same analysis.
+R integrates with other tools to generate manuscripts from your code. If you collect more data, or fix a mistake in your dataset, the figures and the statistical tests in your manuscript are updated automatically.
+
+An increasing number of journals and funding agencies expect analyses to be reproducible, so knowing R will give you an edge with these requirements.
+
+#### R is interdisciplinary and extensible
+With 10,000+ packages that can be installed to extend its capabilities, R provides a framework that allows you to combine statistical approaches from many scientific disciplines to best suit the analytical framework you need to analyze your data. R has packages for image analysis, GIS, time series, population genetics, and a lot more.
+
+#### R works on data of all shapes and sizes
+The skills you learn with R scale easily with the size of your dataset. Whether your dataset has hundreds or millions of lines, it won’t make much difference to you.
+R is designed for data analysis. It comes with special data structures and data types that make handling of missing data and statistical factors convenient.
+R can connect to spreadsheets, databases, and many other data formats, on your computer or on the web.
+
+
+#### R produces high-quality graphics
+The plotting functionalities in R are endless, and allow you to adjust any aspect of your graph to convey most effectively the message from your data.
+
+#### R has a large and welcoming community
+Thousands of people use R daily. Many of them are willing to help you through mailing lists and websites such as Stack Overflow, or on the RStudio community.
+
+Not only is R free, but it is also open-source and cross-platform
+Anyone can inspect the source code to see how R works. Because of this transparency, there is less chance for mistakes, and if you (or someone else) find some, you can report and fix bugs.
+
+#### Setup Instructions
+R and RStudio are separate downloads and installations. R is the underlying statistical computing environment, but using R alone is no fun. RStudio is a graphical integrated development environment (IDE) that makes using R much easier and more interactive. You need to install R before you install RStudio.
+
+* For detailed instructions, see Data Carpentry's [excellent notes](https://datacarpentry.org/R-ecology-lesson/)
+
+### Getting around RStudio
+
+In my opinion, RStudio is the easiest and most efficient way to use R. It's well worth it to take the time to get comfortable with it. 
+
+RStudio has four panes:
+
+![](img/rstudio_session_4pane_layout.png)
+
+
+#### R as a calculator
+
+R works just like a calculator
+
+Type 10 + 2 into the console and hit enter
+
+```{r}
+10 + 2
+```
+
+We can do the same with other operators (note: use * for multiplication, not x).
+
+We are not limited to two numbers … we can use as many as you like. 
+
+Type 10 + 2 - 8 / 43 and press Enter
+
+```{r}
+8 + 2 - 10 / 43
+```
+
+These operations follow the general laws of arithmetic (e.g. multiplication and division first, followed by addition and subtraction).
+
+#### Although this arithmetic is all very useful, why use R to do it? 
+R is a programming language and often the reason we use a programming language as opposed to a calculator is to automate some process or avoid unnecessary repetition.
+
+In this case, we may want to use our result from above in a second calculation. Instead of retyping 10 + 2 every time we need it, we can just create a new variable that stores the result.
+
+The way you assign a value to a variable in R is by using the assignment operator, which is just a ‘less than’ symbol followed by a ‘minus’ sign. It looks like this: <-
+
+Think of the assignment operator as an arrow. You are assigning the value on the right side of the arrow to the variable name on the left side of the arrow.
+
+To assign the result of 10 + 2 to a new variable called x, you type x <- 10 + 2. This can be read as ‘x gets 10 plus 2’. Give it a try now. What happened?
+
+```{r}
+x <- 5 + 7
+```
+
+You’ll notice that R did not print the result of 12 this time. When you use the assignment operator, R assumes that you don’t want to see the result immediately, but rather that you intend to use the result for something else later on. R stores the variable x and its contents in the memory for this R session.
+
+To view the contents of the variable x, just type x and press Enter. Try it now.
+
+```{r}
+x
+```
+
+This ability to store variables, or objects, and their contents is very useful. It allows us to pass these variables to other calculations, as well as store the output as a different variable.
+
+Now, store the result of x - 3 in a new variable called y.
+
+```{r}
+y <- x - 3
+```
+What is the value of y? Type y to find out.
+```{r}
+y
+```
+
+
+## 2. Packages in R 
+
+A package is a fundamental unit of reproducible R code. They include reusable functions, the documentation that describes how to use them and typically sample data. Packages in R are basically sets of additional functions that let you do more stuff. The functions we've been using so far, like `str()` or `data.frame()`, come built into R; packages give you access to more of them. Before you use a package for the first time you need to install it on your machine, and then you should import it in every subsequent R session when you need it. 
+
+You can install a package in RStudio in two ways:
+
++ Tools/Install Packages/then search for the name of the package
++ use the `install.packages()` function
+
+Today we are going to use a package called the "tidyverse" which is actually a collection of packages designed to work together. This package is recognized by many in the field as being at the forefront of data wrangling. We'll barely scratch the surface, but I think it's important that you learn some of these capabilities. Then if needed, you'll be able to dig in and explore more in your own work. 
+
+Once you install a package, you will not be able to use the functions, objects, and help files in a package until you load it with library(). Once you have installed a
+package, you can load it with the library() function at the beginning of your code file:
+
+```{r, results='hide'}
+library(tidyverse)  #this command will show you the libraries that are loaded
+```
+
+
+## 3. Import Data 
+
+Today we will work with the famous iris data set (collected by Edgar Anderson in 1935). This is a built-in data set available in R. These built in data sets are very helpful for examples. **However, I want all of you to understand how to load data into R, so please download the data [here](http://www.timassal.com/wp-content/uploads/2020/03/iris.csv).**  
+
++ At this point, we have two options: 
+  + tell R where it is using
+  + change the working directory to where it is - "hardwire it" using setwd()
+    
+**Best Practice - have working directory automatically set to a common place and use relative paths**
+
+#### Projects
+
++ Think of each project as a self-contained unit in a single folder/directory
++ Treat all locations as relative to that single directory
++ To do this in RStudio we use projects
+  + File -> New Project -> New Directory -> New Project -> RIntro
+  + This is now your working directory
++ Or use Existing Directory to choose an existing directory
++ Creates .Rproj file
+  + Isn’t project itself
+  + Contains project info
+  + Don’t change manually
++ Get the data we'll use for the day:
+  + Go into windows explorer (or finder on a mac) and create a directory called "SourceData" and another one called "DerivedData" in the Directory "RIntro"
+  + Then place the "iris.csv" file into the SourceData directory
+
+Once your project is set up, reload the `tidyverse` package:
+
+```{r, results='hide'}
+library(tidyverse)  #this command will show you the libraries that are loaded
+```
+
+then load the data:
+
+```{r, results='hide'}
+iris.df <- read_csv("SourceData/iris.csv")
+```
+
+
+This creates a dataframe called `iris.df`. A dataframe is used for storing data tables. It is a list of vectors of equal length. We can create a dataframe from scratch by combining multiple vectors of equal length. However, it is much more common to work with dataframes that are input from an existing table, which we did here. 
+
+View the dataframe: 
+
+```{r, results='hide'}
+view(iris.df)
+```
+
+However, dataframes are often very large so let's get familiar with programatic functions to view a particular dataframe. 
+
+View the first few rows of the dataframe:
+
+```{r, results='hide'}
+head(iris.df)
+```
+
+or more details about the structure of the dataframe:
+
+```{r, results='hide'}
+str(iris.df)
+```
+
+`head()` and `str()` are built in functions. To get help about a function simply type:
+
+```{r, results='hide'}
+?str() #the bottom right box in RStudio will display the help
+```
+
+#### Create a new attribute
+
+Suppose we want to create a new identifier named “IDENT” that will contain the letter A-# (e.g. “A-1”) using the the `paste()` and `nrow` functions along with the `$` operator:
+
+```{r, results='hide'}
+iris.df$IDENT<-paste("A", sep="-", 1:nrow(iris.df))
+```
+
+Have a look at the new attribute:
+```{r, results='hide'}
+head(iris.df)
+```
+
+Once you become an R pro, you'll never want to export your data, but in case you need to:
+```{r, results='hide'}
+write_csv(iris, "DerivedData/iris_out.csv")
+```
+
+Notice, we exported the data to the "DerivedData" directory. Have a look at the data in Windows Explorer or Finder. 
+
+R is an incredibly powerful tool for working with data - e.g. reformatting data, subsetting data, massaging data, etc. collectively referred to as data wrangling - to get it into the format you need for analysis. This is an important and often time consuming step. 
+
+
+## 4. Visualize Data 
+
+Visualizing your data in a number of different ways allows you to determine the distribution or shape of the data which is helpful as you move into your statistical analysis. This exercise also forces you to find mistakes in the data or spurious values.
+
+`BaseR` has a number of plot capabilities with no frills:
+
+```{r}
+#Plot a histogram
+hist(iris$Petal.Length, main="Histogram of Petal Length")
+```
+
+```{r}
+#Plot a boxplot grouped by species
+boxplot(Petal.Length~Species, data=iris,main="Boxplot by Species",xlab="Species")
+```
+
+We can also explore the relationship between sepal length and width using a simple scatter plot.
+```{r}
+#Plot a scatterplot
+plot(iris$Petal.Width, iris$Petal.Lenth, main="Scatterplot")
+```
+
+
+#### Plotting with **`ggplot2`**
+
+**`ggplot2`** is a plotting package that makes it simple to create complex plots
+from data in a data frame. It provides a more programmatic interface for
+specifying what variables to plot, how they are displayed, and general visual
+properties. Therefore, we only need minimal changes if the underlying data change
+or if we decide to change from a bar plot to a scatter plot. This helps in creating
+publication quality plots with minimal amounts of adjustments and tweaking.
+
+ggplot graphics are built step by step by adding new elements. Adding layers in
+this fashion allows for extensive flexibility and customization of plots. The **`ggplot2`** package is included in the **`tidyverse`** ecosystem, so we do not need to load it.   
+
+
+Let's visualize the previous scatterplot in **`ggplot2`**:
+
+```{r}
+ggplot(iris.df, aes(x = Petal.Width, y = Petal.Length)) +
+  geom_point(aes(), shape = 19, color = "blue", alpha =0.4) +# alpha to fade points
+  geom_smooth(method = "lm", se = FALSE, color = "black") #fit a line 
+```
+
+
+## 5. Moving Beyond Today
+
+**At this point, you can conduct any number of data visualization or data analysis techniques.**
+
+Sticking with the prior example, it seems like there is a pretty strong relationship between iris petal length and petal width. Let’s fit a model to find out!
+
+```{r}
+model1 <- lm(Petal.Length ~ Petal.Width, data = iris.df)
+```
+
+Congratulations - you just ran a regression in R using one line of code!
+
+Next, we’ll examine the output of the model. There are a number of ways to do this, but the summary command will give you everything:
+
+```{r}
+summary(model1)
+```
+
+### **Once your data is in R, the world is your oyster!**
+
+### Words of wisdom:
+
+![](img/wickham_tweet.png)
+
+### Resources:
+
++ [R for Data Science](https://r4ds.had.co.nz/) by Hadley Wickham and Garrett Grolemund **- this is an open source text**.
+
++ When in doubt, use the google!
+
+
+
+
+
+## Part B: Spatial Data Basics
+
+**Some of the material for this lesson was adapted by Tim Assal from Data Carpentry Introduction to Geospatial Concepts. Thanks to Leah Wasser; Megan A. Jones; Lauren O'Brien; Joseph Stachelek; Tom Wright; Tracy Teal; Dev Paudel; Jane Wyngaard; Anne Fouilloux; Bidhyananda Yadav; Chris Prener; Tyson Swetnam; Erin Becker; Katrin Leinweber
+
+
+## Section Outline
+1. Geospatial Data Structures: Raster and Vector
+2. Importing Spatial Data in R
+3. Raster manipulation
+
+
+### What is spatial data?
+
+Spatial data is information about the locations and shapes of geographic features and the relationships between them, usually stored as coordinates and topology. 
+
+### 1. Geospatial Data Structures: Raster and Vector
+
+The two primary types of geospatial data are raster and vector data. Raster data is stored as a grid of values which are rendered on a map as pixels. Each pixel value represents an area on the Earth's surface. Vector data structures represent specific features on the Earth's surface, and
+assign attributes to those features.
+
+#### Vector Data
+
+Vector data structures represent specific features on the Earth's surface along with attributes of those features.
+
+Vector objects are either points, lines, or polygons.
+
+
+![](img/pnt_line_poly.png)
+
+Image Source: National Ecological Observatory Network (NEON)  
+
+
+* **Points:** Each point is defined by a single x, y coordinate. There can be
+many points in a vector point file. Examples of point data include: sampling
+locations, the location of individual trees, or the location of survey plots.
+
+* **Lines:** Lines are composed of many (at least 2) points that are connected.
+For instance, a road or a stream may be represented by a line. This line is
+composed of a series of segments, each "bend" in the road or stream represents a
+vertex that has defined x, y location.
+
+* **Polygons:** A polygon consists of 3 or more vertices that are connected and
+closed. The outlines of survey plot boundaries, lakes, oceans, and states or
+countries are often represented by polygons.
+
+**Sometimes, boundary layers such as states and countries, are stored as lines rather than polygons. However, these boundaries, when represented as a line, will not create a closed object with a defined area that can be filled.**
+
+#### Important Attributes of Vector Data
+
+##### Extent
+
+The spatial extent is the geographic area that the vector data covers. 
+The spatial extent of an R spatial object represents the geographic edge or
+location that is the furthest north, south, east and west. In other words, extent
+represents the overall geographic coverage of the spatial object. For example:
+
+![](img/spatial-extent-vector.png)
+
+#### Raster Data
+
+Raster data is any pixelated (or gridded) data where each pixel is associated
+with a specific geographical location. The value of a pixel can be
+continuous (e.g. elevation) or categorical (e.g. land use). If this sounds
+familiar, it is because this data structure is very common: it's how
+we represent any digital image. A geospatial raster is only different
+from a digital photo in that it is accompanied by spatial information
+that connects the data to a particular location. This includes the
+raster's extent and cell size, the number of rows and columns, and
+its coordinate reference system (or CRS).
+
+![](img/raster_concept.png)
+
+Source: National Ecological Observatory Network (NEON)  
+
+
+
+Some examples of continuous rasters include:
+
+1. Precipitation maps.
+2. Maps of tree height derived from LiDAR data.
+3. Elevation values for a region.
+
+A map of elevation for Harvard Forest derived from the [NEON AOP LiDAR sensor](http://www.neonscience.org/data-collection/airborne-remote-sensing)
+is below. Elevation is represented as continuous numeric variable in this map. The legend
+shows the continuous range of values in the data from around 300 to 420 meters.
+
+![](img/rmd-01-elevation-map-1.png)
+
+Some rasters contain categorical data where each pixel represents a discrete
+class such as a landcover type (e.g., "forest" or "grassland") rather than a
+continuous value such as elevation or temperature. Some examples of classified
+maps include:
+
+1. Landcover / land-use maps.
+2. Tree height maps classified as short, medium, and tall trees.
+3. Elevation maps classified as low, medium, and high elevation.
+
+![](img/USA_landcover_classification_sm.png)
+
+
+The map above shows the contiguous United States with landcover as categorical
+data. Each color is a different landcover category. (Source: Homer, C.G., et
+al., 2015, Completion of the 2011 National Land Cover Database for the
+conterminous United States-Representing a decade of land cover change
+information. Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p.
+345-354)
+
+#### Important Attributes of Raster Data
+
+##### Extent
+
+The spatial extent is the geographic area that the raster data covers. 
+The spatial extent of an R spatial object represents the geographic edge or
+location that is the furthest north, south, east and west. In other words, extent
+represents the overall geographic coverage of the spatial object.
+
+![](img/spatial-extent-raster.png)
+**How is this possible? What is going on in the pixels that are not green?**
+
+### 2. Importing spatial data in R
+
+**Option to work on this section independently**
+
+Place those two directories inside your working directory in a directory named "SourceData". Then you can create a new R project and load the data. This is good practice for proper file management. 
+
+#### Import Vector Data
+
+We will use the `sf` package to work with vector data in R. Notice that the
+`rgdal` package automatically loads when `sf` is loaded. Make sure you install and load the `sf` library. We'll also add the `ggplot2` and `raster` packages.
+
+```{r, message=FALSE, warning=FALSE}
+library(raster)
+library(ggplot2)
+library(sf)
+```
+
+Let's load a shapefile of campus:
+
+```{r Import-Shapefile}
+KSU_Campus <- st_read("SourceData/KSU_Boundary.shp")
+```
+
+The shapefile has now been loaded as an object. 
+
+```{r}
+#get the projection of it 
+st_crs(KSU_Campus)
+```
+
+**We don't have time to go into projections right now, but know they are important if you work with spatial data on your own. You will not have to worry about projections for anything in this course.**
+
+Let's add some more data and make a map:
+
+```{r, message=FALSE}
+#add a shp of campus buildings
+KSU_Buildings <- st_read("SourceData/KSU_Buildings.shp")
+```
+
+```{r, message=FALSE}
+Map1<-ggplot() +
+  #load campus boundary first
+  geom_sf(data = KSU_Campus, size = 0.25, color = "black", fill = "gray80") + 
+  #load buildings second - ggplot adds each layer in order, so we want buildings on top
+  geom_sf(data = KSU_Buildings, size = 0.5, color = "darkblue", fill = "yellow") +
+  coord_sf()+
+  #add labels
+  labs(title = "Kent State University Campus",
+       subtitle = "Building Footprints - 2019", 
+       caption = "Data Sources: KSU Data (Map It!); OH Data (Ohio DOT)")+
+  theme_linedraw() #this will remove the default gray background from the map
+Map1 #plot map
+```
+
+We can save it to the Figures directory using ``ggsave()``:
+
+```{r, message=FALSE}
+#ggsave("Figures/KSU_Map.jpg", Map1, width=8, height=4, dpi=300) #save map
+```
+
+
+#### Import Raster Data
+
+Below, we'll use the `raster` package. However, there is a new package called `terra` this will likely eclipse the `raster` package in the coming years. Much of the syntax is similar, but there is a helpful comparison [here](https://www.r-bloggers.com/2021/05/a-comparison-of-terra-and-raster-packages/). 
+
+Let's load a raster data set of elevation in the Kent area. 
+
+```{r, message=FALSE}
+Kent.Elev <- raster ("SourceData/kent_elev.tif") #note, this data set is in meters!
+#reproject the raster data to match the KSU campus data
+Kent.Elev.R<- projectRaster(Kent.Elev, crs = crs(KSU_Campus)) 
+st_crs(Kent.Elev.R)
+#plot the data and take note of the coordinates
+plot(Kent.Elev.R)
+```
+
+Now let's make a proper map using `ggplot2`:
+
+First, we need to prep the raster data for ggplot by converting it into a dataframe:
+```{r, message=FALSE}
+#convert raster cells to points
+map.p<-rasterToPoints(Kent.Elev.R)
+#convert the points to a dataframe
+df <- data.frame(map.p)
+#Rename column headings
+colnames(df) <- c("Longitude", "Latitude", "Elev")
+```
+
+Now we're ready to plot. Once we develop the raster plot, we can add a vector spatial object the same way we've already plotted them:
+```{r, message=FALSE}
+ggplot() +
+  geom_raster(data = df, aes(x = Longitude, y = Latitude, fill=Elev)) + 
+  scale_fill_gradientn(name = "KSU Campus Elevation", colors = terrain.colors(20)) +
+  geom_sf(data = KSU_Campus, color = "blue", fill = NA) +
+  coord_sf()
+```
+
+### 3. Raster manipulation
+
+Suppose we want to classify the areas of Kent that are greater than 340 meters as high elevation, areas between 320 and 340 as moderate elevation, and areas below 320 meters as low elevation. We can use the ``reclassify`` function:
+
+```{r, message=FALSE}
+Kent.Elev.Reclass <- reclassify(Kent.Elev.R, c(-Inf,320,1, 320, 340, 2, 340,Inf,3))
+plot(Kent.Elev.Reclass)
+```
+
+**Note, starting at -Inf to 320 assigns all values to 1; 320 to 340 as 2; and 340 to Inf as 3.**
+
+Now that we've learned how to reclassify, let's create a new raster and use it to crop the elevation raster. 
+
+First, we'll create a raster of all areas less than 320 meters. Notice, we set that value to 1 and all other values are set to ``NA`` which indicates ``NoData``:
+```{r, message=FALSE}
+Kent.Elev.Reclass2 <- reclassify(Kent.Elev.R, c(-Inf,320,1, 320, Inf,NA))
+plot(Kent.Elev.Reclass2)
+```
+
+Next, we'll simply multiply the raster we just created with the original elevation raster. Since the input raster value is 1, it will retain the elevation value at each cell, and will exclude all areas outside of that raster because it is set to ``NA``
+```{r, message=FALSE}
+Kent.Elev.320<-Kent.Elev.Reclass2 * Kent.Elev.R
+plot(Kent.Elev.320)
+```
+
+**This is a very efficient way to crop a large number of rasters in R. Simply create a "Master Raster" of your study area - areas inside the study area have a value of 1; areas outside are set to `NA`. Then use this layer to multiply all of your input rasters to efficiently crop them to the study area.**
+
+**Also, this is a basic premise of band math - commonly used tools in raster analysis**

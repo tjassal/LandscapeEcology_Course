@@ -1,0 +1,391 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE, cache=FALSE} 
+knitr::opts_chunk$set(echo = TRUE) 
+knitr::opts_chunk$set(error = TRUE) #this will allow it to knit with errors for demonstration purposes and cache=F
+```
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 12 px;
+}
+</style>
+
+## Week 12 Lesson: Raster Data Analysis
+#### Tim Assal
+
+We will go through this lesson in class, but I would like each of you to type the code as we go to get used to executing code in RStudio.
+
+### This lesson will cover:
+
+1. Crop Raster Data
+2. Reclassify a Raster
+3. Extract Raster values to points
+4. Raster Math
+5. Zonal Stats
+6. Create a Raster Stack
+7. Raster Viz
+
+**Download the data for this lesson**
+We will use the previous data we've used (Ohio Data) and some new data (NDVI Data). I've posted the data for this portion of lesson on my [course github page](https://github.com/tjassal/DataAnalysisR_Course). Click on NDVI.zip, then on the next screen, click the download button (right side of screen). Unzip the file and place the NDVI directory (~folder) inside your working directory in a directory named "SourceData". At this time also create a "DerivedData" directory. Then you can create a new R project and load the data later in the lesson as needed. If you don't have the Ohio Data from previous lessons, it can be downloaded in the Ohio_Data.zip folder. 
+
+### Raster Data in R
+
+In the last lesson we worked mostly with vector data in R. In my opinion, the real power in R comes in the form of raster analysis. Many types of data used in modeling are in raster format: satellite data, climate data, topography data, etc. In this lesson we'll learn how to manipulate raster data in a number of ways. 
+
+This lesson will primarily use the `raster` package that we've used in previous lessons. However, there is a new package called `terra` this will likely eclipse the `raster` package in the coming years. Much of the syntax is similar, but there is a helpful comparison [here](https://www.r-bloggers.com/2021/05/a-comparison-of-terra-and-raster-packages/). Most of the lesson will use the `raster` package, but I will show an example (e.g. zonal statistics) using both packages. 
+
+### 1. Crop Raster Data
+
+We often need to crop raster data to our study area. This saves space and makes processes in R more efficient. 
+
+
+Recall the map we made last lesson with these two datasets:
+![KSU Campus with Elevation](img/KSUCampus_Elevation.png)
+
+Let's load the packages we will need for today's lesson:
+```{r, message=FALSE}
+library(tidyverse)
+library(raster)
+library(rgdal)
+library(sf)
+library(gridExtra)
+```
+
+Let's also load the KSU boundary and Kent elevation datasets. We'll also reproject the Kent elevation data set to match the KSU boundary. We performed these same operations last lesson. 
+
+```{r, message=FALSE}
+KSU_Campus <- st_read("SourceData/KSU_Boundary.shp")
+Kent.Elev <- raster ("SourceData/kent_elev.tif") #note, this data set is in meters!
+#reproject the raster data
+Kent.Elev.R<- projectRaster(Kent.Elev, crs = crs(KSU_Campus)) 
+st_crs(Kent.Elev.R)
+#plot the data and take note of the coordinates
+plot(Kent.Elev.R)
+```
+
+#### Crop by coordinates
+
+```{r, message=FALSE}
+#crop; give the coords  (xmin, xmax, ymin, ymax)
+Kent.Elev.c <- crop(Kent.Elev.R, c(470000, 473000, 4553000, 4556000))
+Kent.Elev.c
+plot(Kent.Elev.c)
+```
+
+#### Crop by a vector
+
+We can use the ``crop()`` function to crop a raster to the extent of another spatial object. To do this, we need to specify the raster to be cropped and the spatial object that will be used to crop the raster. R will use the extent of the spatial object as the cropping boundary. 
+
+```{r, message=FALSE}
+#perform the raster crop using the campus shapefile
+Kent.Elev.c2<-crop(Kent.Elev.R, KSU_Campus) #raster first, then vector
+```
+
+Now let's plot and compare the extent to what we plotted last lesson:
+
+First, we need to prep the raster data for ggplot by converting it into a dataframe:
+```{r, message=FALSE}
+#convert raster cells to points
+map.p<-rasterToPoints(Kent.Elev.c2)
+#convert the points to a dataframe
+df <- data.frame(map.p)
+#Rename column headings
+colnames(df) <- c("Longitude", "Latitude", "Elev")
+```
+
+Now we're ready to plot. Once we develop the raster plot, we can add a vector spatial object the same way we've already plotted them:
+```{r, message=FALSE}
+ggplot() +
+  geom_raster(data = df, aes(x = Longitude, y = Latitude, fill=Elev)) + 
+  scale_fill_gradientn(name = "KSU Campus Elevation", colors = terrain.colors(20)) +
+  geom_sf(data = KSU_Campus, color = "blue", fill = NA) +
+  coord_sf()
+```
+
+**Compare the extent of the raster in this map with the one from last week.**
+
+**If you received an error at the ``crop()`` step,** it is likely due to the raster package struggling to handle an ``sf`` object. Therefore, you first need to convert KSU_Campus from an ``sf`` object to “Spatial” object using the following:
+
+```{r, message=FALSE}
+KSU_Campus.sp<-as(KSU_Campus, "Spatial")
+```
+
+Notice we get an error and we have to remove the Z dimension first. We can do that using the following:
+
+```{r, message=FALSE}
+KSU_Campus<-st_zm(KSU_Campus, drop = TRUE, what = "ZM")
+```
+
+Now we can convert the ``sf`` object to an ``sp`` object:
+```{r, message=FALSE}
+KSU_Campus.sp<-as(KSU_Campus, "Spatial")
+```
+
+And now we can perform the raster crop using the campus shapefile
+```{r, message=FALSE}
+Kent.Elev.c3<-crop(Kent.Elev.R, KSU_Campus) #raster first, then vector
+```
+
+#### Crop by a raster
+
+In the last step, we have only clipped the raster to the spatial extent of campus. If you need to clip to the exact area of the vector, you will need to convert the polygon to a raster, reclassify it and perform raster math. We'll get back to this step after we learn how to reclassify a raster. 
+
+
+### 2. Reclassify a Raster
+
+Suppose we want to classify the areas of Kent that are greater than 340 meters as high elevation, areas between 320 and 340 as moderate elevation, and areas below 320 meters as low elevation. We can use the ``reclassify`` function:
+
+```{r, message=FALSE}
+Kent.Elev.Reclass <- reclassify(Kent.Elev.R, c(-Inf,320,1, 320, 340, 2, 340,Inf,3))
+plot(Kent.Elev.Reclass)
+```
+
+**Note, starting at -Inf to 320 assigns all values to 1; 320 to 340 as 2; and 340 to Inf as 3.**
+
+Now that we've learned how to reclassify, let's create a new raster and use it to crop the elevation raster. 
+
+First, we'll create a raster of all areas less than 320 meters. Notice, we set that value to 1 and all other values are set to ``NA`` which indicates ``NoData``:
+```{r, message=FALSE}
+Kent.Elev.Reclass2 <- reclassify(Kent.Elev.R, c(-Inf,320,1, 320, Inf,NA))
+plot(Kent.Elev.Reclass2)
+```
+
+Next, we'll simply multiply the raster we just created with the original elevation raster. Since the input raster value is 1, it will retain the elevation value at each cell, and will exclude all areas outside of that raster because it is set to ``NA``
+```{r, message=FALSE}
+Kent.Elev.320<-Kent.Elev.Reclass2 * Kent.Elev.R
+plot(Kent.Elev.320)
+```
+
+**This is a very efficient way to crop a large number of rasters in R. Simply create a "Master Raster" of your study area - areas inside the study area have a value of 1; areas outside are set to `NA`. Then use this layer to multiply all of your input rasters to efficiently crop them to the study area. 
+
+### 3. Extract Raster Values to Points
+
+We often need to extract raster data to points or polygons in modelling. A common example is to extract satellite data to field points collected with a GPS unit. 
+
+First let's load the KSU points of interest as a .csv, convert them to spatial points, and reproject them. We did this in the last lesson:
+```{r, message=FALSE}
+KSU_POIs<-read_csv("SourceData/ksu_points_of_interest.csv")
+KSU_POIs.sp<-st_as_sf(KSU_POIs, coords = c("X", "Y"), crs=4326)
+#reproject to UTM
+KSU_POIs.sp.P <- st_transform(KSU_POIs.sp, crs(KSU_Campus.sp)) 
+```
+
+Now we're ready to extract and write the points to a dataframe. Here, the function ``raster::extract`` simply indicates to use the extract function from the raster package in case of an error:
+```{r, message=FALSE}
+KSU_POI.Elev <- raster::extract(Kent.Elev.R, KSU_POIs.sp, df=TRUE)
+KSU_POI.Elev
+```
+
+Note: you might see the following warning message, but that's okay: 
+"Warning message:
+In .local(x, y, ...) : Transforming SpatialPoints to the CRS of the Raster"
+
+You can also extract all elevation points inside a polygon or calculate zonal statistics, but we won't cover that here.
+
+### 4. Raster Math
+
+In R, you can perform a number of mathematical operations on raster layers. We already did this when cropping a raster with a raster, but let's look at another example. 
+
+Recall the Kent elevation data is in meters. Let's create a raster of elevation in feet.
+```{r, message=FALSE}
+Kent.Elev.FT<-Kent.Elev.R * 3.28
+```
+
+Here, we simply multiply the raster in meters by 3.28 to convert to feet. This operation multiplies the value of each cell in the raster by 3.28. 
+```{r, message=FALSE}
+#plot both and notice the change in units in the scale bar
+par(mfrow = c(1, 2)) #set two plot windows to draw side by side  
+plot(Kent.Elev.R) 
+plot(Kent.Elev.FT)
+par(mfrow = c(1, 1)) #reset the plot window 
+```
+
+#### Global Statistics
+
+Global statistics refer to calculating a descriptive statistic over the entire extent of a raster. 
+
+Let's compare some values using the ``cellStats`` function. Compare the min, max and mean values of the two rasters:
+```{r, message=FALSE}
+cellStats(Kent.Elev.R, min)
+cellStats(Kent.Elev.FT, min)
+cellStats(Kent.Elev.R, mean)
+cellStats(Kent.Elev.FT, mean)
+cellStats(Kent.Elev.R, max)
+cellStats(Kent.Elev.FT, max)
+```
+
+**Notice this only returns a single value for the entire raster**
+
+**It is also possible to add two rasters together, subtract, multiply, divide, etc. In every case, the operation is performed on each respective cell that shares the same location in space.**
+
+
+### 5. Zonal Statistics
+
+We can calculate statistics by a zone. This can be done with two rasters using the `raster` package, a shapefile representing the zones with raster using the `terra` package, or using a shapefile and a raster using the `spatialEco` package (not shown here). 
+
+#### Zonal Stats using `raster`
+```{r, message=FALSE}
+#create some raster data
+r <- raster(ncols=10, nrows=10)
+values(r) <- runif(ncell(r)) * 1:ncell(r)
+z <- r
+values(z) <- rep(1:5, each=20)
+par(mfrow=c(1,2)) #set plot for two windows
+plot(r, main="Input raster")
+plot(z, main="Zone raster")
+#calculate the mean of the input raster by zone
+zonal(r, z, 'mean')
+```
+
+**These values represent the mean raster value across each zone. You can use any number of descriptive statistics here `min`, `max`, `sum`, etc.**
+
+#### Zonal Stats using `terra`
+```{r, message=FALSE}
+#load the terra package
+library(terra)
+#load a shapefile from the terra package
+f <- system.file("ex/lux.shp", package="terra")
+v <- vect(f) #create a spatial vector object from the file
+plot(v) #plot the shapefile - it represents regions of the country Luxembourg
+
+#load a raster from the terra package
+f <- system.file("ex/elev.tif", package="terra")
+r <- rast(f)
+plot(r) #this represents elevation
+#convert the vector shapefile to a raster on the NAME_2 attribute to perform the operation
+z <- rasterize(v, r, "NAME_2")    
+zonal(r, z, mean, na.rm=TRUE)
+```
+
+**These values represent the mean raster value across each zone. You can use any number of descriptive statistics here `min`, `max`, `sum`, etc.**
+
+**####Note: the above example is the only time we're using the `terra` package in this lesson - all other functions pertain to the `raster` package**
+
+### 6. Create a raster stack
+
+A ``RasterStack`` is a collection of ``RasterLayer`` objects with the same spatial extent and resolution. It is helpful to put them in a stack so we can then do a number of operations.
+
+Let's create a ``RasterStack``:
+```{r, message=FALSE}
+ndvi.st<-stack()
+ndvi.st
+```
+
+Notice there are no layers in it yet. 
+
+Next, we'll load some data. I prepped some satellite imagery for the Cuyahoga Watershed. The imagery is from a satellite called MODIS and it is 250 m resolution. NDVI stands for the "Normalized Difference Vegetation Index" and is a common metric derived from the red and near-infrared bands in satellite data. Each layer represents the mean June NDVI or greenness values for each year over the last 15 years. Higher NDVI values reflect greater vegetation (forests, wooded areas, agriculture, etc.) and low values reflect lack of vegetation (cities, high density road areas, etc.). The data is scaled by a factor of 10,000 so a value of 8,000 actually represents 0.8. For this exercise, we don't need to worry about rescaling the data. 
+
+```{r, message=FALSE}
+ndvi.2002 <- raster ("SourceData/NDVI/June_2002.tif")
+plot(ndvi.2002)
+```
+
+Let's have a look at the NDVI from 2002. Note the high and low values, can you get a sense of where the urban areas are located? 
+
+Now, let's load the rest of the data:
+```{r, message=FALSE}
+ndvi.2003 <- raster ("SourceData/NDVI/June_2003.tif")
+ndvi.2004 <- raster ("SourceData/NDVI/June_2004.tif")
+ndvi.2005 <- raster ("SourceData/NDVI/June_2005.tif")
+ndvi.2006 <- raster ("SourceData/NDVI/June_2006.tif")
+ndvi.2007 <- raster ("SourceData/NDVI/June_2007.tif")
+ndvi.2008 <- raster ("SourceData/NDVI/June_2008.tif")
+ndvi.2009 <- raster ("SourceData/NDVI/June_2009.tif")
+ndvi.2010 <- raster ("SourceData/NDVI/June_2010.tif")
+ndvi.2011 <- raster ("SourceData/NDVI/June_2011.tif")
+ndvi.2012 <- raster ("SourceData/NDVI/June_2012.tif")
+ndvi.2013 <- raster ("SourceData/NDVI/June_2013.tif")
+ndvi.2014 <- raster ("SourceData/NDVI/June_2014.tif")
+ndvi.2015 <- raster ("SourceData/NDVI/June_2015.tif")
+ndvi.2016 <- raster ("SourceData/NDVI/June_2016.tif")
+```
+
+Now that it's in R, we can add each of these layers into the stack:
+```{r, message=FALSE}
+ndvi.st<-addLayer(ndvi.st, ndvi.2002, ndvi.2003, ndvi.2004, ndvi.2005, ndvi.2006, 
+                  ndvi.2007, ndvi.2008, ndvi.2009, ndvi.2010, ndvi.2011,
+                  ndvi.2012, ndvi.2013, ndvi.2014, ndvi.2015, ndvi.2016)
+ndvi.st
+```
+
+Notice the nuber of layers in the stack is 15; 15 years of data! Now we can do calculations across the entire stack with very little code and it will calculate across all layers. 
+
+#### Pixel-wise statistics
+
+This type of operation is known as the **pixel-wise** mean because it is calculated at the pixel level. You will end up with an output raster that summarized 
+
+Let's calculate the mean of the stack. We start with 15 layers, and the result is one layer that reflects the mean of the 15 years of NDVI for each raster cell. 
+```{r, message=FALSE}
+mean.ndvi.2002.2016<-mean(ndvi.st)
+plot(mean.ndvi.2002.2016)
+```
+
+There are many other operations we can do such as min, max, etc.
+```{r, message=FALSE}
+max.June.2002.2016<-max(ndvi.st)
+min.June.2002.2016<-min(ndvi.st)
+```
+
+Notice, the pixel-wise calculations are different from the last section were we used ``cellStats`` to calculate the mean of the entire raster, resulting in just one value. 
+
+Remember the data is not rescaled. Let's rescale each of the layers in one line of code:
+```{r, message=FALSE}
+rescale.ndvi<-ndvi.st/10000
+mean.rescale.ndvi<-rescale.ndvi
+mean.rescale.ndvi
+```
+
+Notice, this object is returned as a ``RasterBrick``. The R RasterStack and RasterBrick object types can both store multiple bands. However, how they store each band is different. The bands in a RasterStack are stored as links to raster data that is located somewhere on our computer. A RasterBrick contains all of the objects stored within the actual R object. In most cases, we can work with a RasterBrick in the same way we might work with a RasterStack. However a RasterBrick is often more efficient and faster to process - which is important when working with larger files.
+
+There are countless calcluations that can be done using rasterstacks. Then you can simply export the layer(s) from your calculations if you need to use them in another application. 
+
+### 7. Raster Viz
+
+Many types of raster data have many layers (e.g. climate data, plant productivity, etc.) lend themselves to raster stacks, making exploratory data analysis challenging. However, there is an excellent package for raster visualization called rasterVis. Let's install it now. It is a very nice tool for exploratory data analysis of raster data. 
+
+Let's load the package and produce a levelplot which will display all of the data. 
+There was an issue in the `rasterVis` package once the `terra` package was created. In order to work properly, you need to install the developer version of the `rastervis` package.
+```{r, message=FALSE}
+#first install the remotes package
+library(remotes)
+remotes::install_github("oscarperpinan/rastervis") #install the dev version
+library(rasterVis)
+levelplot(ndvi.st) #run the levelplot
+```
+
+There is not a lot of variability in this data, but if there was, we'd see it here.
+
+We can also use a modified version of that function to return the median (or any other stat) across all layers. Furthermore, the gray areas on the axis represent the mean at any given cell of latitude or longitude.
+```{r, message=FALSE}
+levelplot(ndvi.st, layers = 1, margin = list(FUN = 'median'))
+```
+
+There are many other operations and I encourage you to explore more at Oscar Perpiñán's [page](https://oscarperpinan.github.io/rastervis/).
+
+Here are a few examples of functions that are helpful to compare between years of data:
+
+**Histograms**
+```{r, message=FALSE}
+histogram(ndvi.st)
+```
+
+**Density Plot** (a modified version of histograms)
+```{r, message=FALSE}
+densityplot(ndvi.st)
+```
+
+**Box and Whisker Plot** (boxplots that incorporate violin plots)
+```{r, message=FALSE}
+bwplot(ndvi.st) #box and whisker plot
+```
+
+
+
+
